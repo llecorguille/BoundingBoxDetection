@@ -56,7 +56,7 @@ gestures = ['None', 'fist', 'thumb up', 'thumb down', \
             'C', 'okay', '2 fingers', '2 fingers horiz', \
             'rock&roll', 'rock&roll horiz']
 
-ratio = [0,1,0.7,0.7,0.7,1,1.5,1,0.7,0.8,0.8,0.5,2,0.7,1.5]
+ratios = [0,1,0.7,0.7,0.7,1,1.5,0.7,0.7,0.8,0.8,0.5,2,0.7,1.5]
 
 def randomBox(size_x,size_y,size,ratio):
     start_box_x1 = r.randint(0,size_x-size)
@@ -67,23 +67,20 @@ def mooveBox(x1,y1,x2,y2,length,cpt):
     return int(x1 + (x2-x1)*(cpt/length)), int(y1 + (y2-y1)*(cpt/length))
 
 def getCoordBox(x1,y1,size,ratio):
-    #returns x2,y2
-    '''if ratio>1:
-        x2 = x1 + int(size*ratio)
-        y2 = y1 + size
-    else:'''
-
     x2 = x1 + size
     y2 = y1 + int(size*ratio)
     return x2,y2
 
-def drawBox(image_np,x1,y1,x2,y2):
+def drawBox(image_np,x1,y1,x2,y2,end_box_x1,end_box_y1):
     image_np[x1:x2,y1:y1+5,:] = [0,255,0]
     image_np[x1:x1+5,y1:y2,:] = [0,255,0]
     image_np[x2:x2+5,y1:y2,:] = [0,255,0]
     image_np[x1:x2,y2:y2+5,:] = [0,255,0]
+    image_np[end_box_x1-2:end_box_x1+2,end_box_y1-10:end_box_y1+10] = [255,0,255]
+    image_np[end_box_x1-10:end_box_x1+10,end_box_y1-2:end_box_y1+2] = [255,0,255]
 
-def main(x,ratio):
+def main(x,ratioInit):
+    ratio = ratioInit
     t = time() + 1
     global maxValue
     cpt = maxValue
@@ -102,7 +99,7 @@ def main(x,ratio):
         if time() - t > 0.1 and not(pauseState):
             print('shoot', cpt)
             gray_image = cv2.resize(base_image, (imgSize,imgSize))
-            if(ratio != 0):
+            if(ratioInit != 0):
                 xa, xb = int(current_box_x1/image_np.shape[0]*100)/100, int(current_box_x2/image_np.shape[0]*100)/100
                 ya, yb = int(current_box_y1/image_np.shape[1]*100)/100, int(current_box_y2/image_np.shape[1]*100)/100
                 cv2.imwrite('./image/' + str(x) + '_' + str(cpt) + '_' + str(xa) + '_' + str(ya) + '_' + str(xb) + '_' + str(yb) +'.png', gray_image)
@@ -119,7 +116,8 @@ def main(x,ratio):
                 boxSize = r.randint(100,200)
                 start_box_x1, start_box_y1 = end_box_x1, end_box_y1
                 end_box_x1, end_box_y1 = randomBox(image_np.shape[0],image_np.shape[1],boxSize,ratio)
-                ratio = ratio + ((r.random()-0.5)*0.2)
+                if ratioInit != 0:#cas différent de images vides
+                    ratio = ratioInit + ((r.random()-0.5)*0.2)
                 j=0
 
             current_box_x1 , current_box_y1 = mooveBox(start_box_x1,start_box_y1,end_box_x1,end_box_y1,100,j)
@@ -127,7 +125,7 @@ def main(x,ratio):
             j+=1
 
         if(ratio != 0):
-            drawBox(image_np,current_box_x1, current_box_y1,current_box_x2,current_box_y2)
+            drawBox(image_np,current_box_x1, current_box_y1,current_box_x2,current_box_y2,end_box_x1,end_box_y1)
         cv2.imshow('object detection', cv2.resize(np.flip(image_np,1), cameraSize))
 
         key = cv2.waitKey(25) & 0xFF
@@ -153,4 +151,4 @@ for elm in liste:
 
 for x in range(nbClass):
     print('Lancement main :', gestures[x])
-    main(x,ratio[x])
+    main(x,ratios[x])
