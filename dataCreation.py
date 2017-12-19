@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import random as r
+import copy
 from time import time, sleep
 import glob
 
@@ -55,55 +56,76 @@ gestures = ['None', 'fist', 'thumb up', 'thumb down', \
             'C', 'okay', '2 fingers', '2 fingers horiz', \
             'rock&roll', 'rock&roll horiz']
 
-def randomBox(size_x,size_y,size):
-    start_box_x = r.randint(0,size_x-size)
-    start_box_y = r.randint(0,size_y-size)
-    return start_box_x,start_box_y
+ratio = [0,1,0.7,0.7,0.7,1,1.5,1,0.7,0.8,0.8,0.5,2,0.7,1.5]
+
+def randomBox(size_x,size_y,size,ratio):
+    start_box_x1 = r.randint(0,size_x-size)
+    start_box_y1 = r.randint(0,size_y-int(size*ratio))
+    return start_box_x1,start_box_y1
 
 def mooveBox(x1,y1,x2,y2,length,cpt):
     return int(x1 + (x2-x1)*(cpt/length)), int(y1 + (y2-y1)*(cpt/length))
 
-def drawBox(image_np,x,y,size):
-    image_np[x:x+size,y:y+5,:] = [0,255,0]
-    image_np[x:x+5,y:y+size,:] = [0,255,0]
-    image_np[x+size:x+size+5,y:y+size,:] = [0,255,0]
-    image_np[x:x+size,y+size:y+size+5,:] = [0,255,0]
+def getCoordBox(x1,y1,size,ratio):
+    #returns x2,y2
+    '''if ratio>1:
+        x2 = x1 + int(size*ratio)
+        y2 = y1 + size
+    else:'''
 
-def main(x):
+    x2 = x1 + size
+    y2 = y1 + int(size*ratio)
+    return x2,y2
+
+def drawBox(image_np,x1,y1,x2,y2):
+    image_np[x1:x2,y1:y1+5,:] = [0,255,0]
+    image_np[x1:x1+5,y1:y2,:] = [0,255,0]
+    image_np[x2:x2+5,y1:y2,:] = [0,255,0]
+    image_np[x1:x2,y2:y2+5,:] = [0,255,0]
+
+def main(x,ratio):
     t = time() + 1
     global maxValue
     cpt = maxValue
     pauseState = True
-    boxSize = 300
+    boxSize = 150
     print('Pause :', pauseState, 'Press SPACE to start')
 
-    start_box_x, start_box_y = randomBox(np.shape(cap.get_frame())[0],np.shape(cap.get_frame())[1],boxSize)
-    end_box_x, end_box_y = randomBox(np.shape(cap.get_frame())[0],np.shape(cap.get_frame())[1],boxSize)
-    current_box_x , current_box_y = start_box_x,start_box_y
+    image_np = cap.get_frame()
+    start_box_x1, start_box_y1 = randomBox(np.shape(image_np)[0],np.shape(image_np)[1],boxSize,ratio)
+    end_box_x1, end_box_y1 = randomBox(np.shape(image_np)[0],np.shape(image_np)[1],boxSize,ratio)
+    current_box_x1 , current_box_y1 = start_box_x1,start_box_y1
+    current_box_x2 , current_box_y2 = getCoordBox(current_box_x1,current_box_y1,boxSize,ratio)
     j=0
 
     while cpt <= maxValue + int(sys.argv[1]):
         if time() - t > 0.1 and not(pauseState):
             print('shoot', cpt)
             gray_image = cv2.resize(base_image, (imgSize,imgSize))
-            cv2.imwrite('./image/' + str(x) + '_' + str(cpt) + '_' + str(current_box_x) + '_' + str(current_box_y) + '_' + str(current_box_x + boxSize) + '_' + str(current_box_y + boxSize) +'.png', gray_image)
+            if(ratio != 0):
+                cv2.imwrite('./image/' + str(x) + '_' + str(cpt) + '_' + str(int(current_box_x1/np.shape(image_np)[0]*100)/100) + '_' + str(int(current_box_y1/np.shape(image_np)[1]*100)/100) + '_' + str(int(current_box_x2/np.shape(image_np)[0]*100)/100) + '_' + str(int(current_box_y2/np.shape(image_np)[1]*100)/100) +'.png', gray_image)
+            else:
+                cv2.imwrite('./image/' + str(x) + '_' + str(cpt) + '.png', gray_image)
             t = time()
             cpt += 1
 
         image_np = cap.get_frame()
-        base_image = cap.get_frame()
+        base_image = copy.deepcopy(image_np)
         if(not(pauseState)):
             if(j == 100):
                 pauseState = True
-                boxSize = r.randint(100,300)
-                start_box_x, start_box_y = end_box_x, end_box_y
-                end_box_x, end_box_y = randomBox(np.shape(cap.get_frame())[0],np.shape(cap.get_frame())[1],boxSize)
+                boxSize = r.randint(100,200)
+                start_box_x1, start_box_y1 = end_box_x1, end_box_y1
+                end_box_x1, end_box_y1 = randomBox(np.shape(image_np[0]),np.shape(image_np)[1],boxSize,ratio)
+                ratio = ratio + ((r.random(0,1)-0.5)*0.2)
                 j=0
 
-            current_box_x , current_box_y = mooveBox(start_box_x,start_box_y,end_box_x,end_box_y,100,j)
+            current_box_x1 , current_box_y1 = mooveBox(start_box_x1,start_box_y1,end_box_x1,end_box_y1,100,j)
+            current_box_x2 , current_box_y2 = getCoordBox(current_box_x1,current_box_y1,boxSize,ratio)
             j+=1
 
-        drawBox(image_np,current_box_x, current_box_y,boxSize)
+        if(ratio != 0):
+            drawBox(image_np,current_box_x1, current_box_y1,current_box_x2,current_box_y2)
         cv2.imshow('object detection', cv2.resize(np.flip(image_np,1), cameraSize))
 
         key = cv2.waitKey(25) & 0xFF
@@ -129,4 +151,4 @@ for elm in liste:
 
 for x in range(nbClass):
     print('Lancement main :', gestures[x])
-    main(x)
+    main(x,ratio[x])
