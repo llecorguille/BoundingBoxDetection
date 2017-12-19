@@ -92,8 +92,8 @@ def main(x,ratio):
     print('Pause :', pauseState, 'Press SPACE to start')
 
     image_np = cap.get_frame()
-    start_box_x1, start_box_y1 = randomBox(np.shape(image_np)[0],np.shape(image_np)[1],boxSize,ratio)
-    end_box_x1, end_box_y1 = randomBox(np.shape(image_np)[0],np.shape(image_np)[1],boxSize,ratio)
+    start_box_x1, start_box_y1 = randomBox(image_np.shape[0],image_np.shape[1],boxSize,ratio)
+    end_box_x1, end_box_y1 = randomBox(image_np.shape[0],image_np.shape[1],boxSize,ratio)
     current_box_x1 , current_box_y1 = start_box_x1,start_box_y1
     current_box_x2 , current_box_y2 = getCoordBox(current_box_x1,current_box_y1,boxSize,ratio)
     j=0
@@ -103,7 +103,9 @@ def main(x,ratio):
             print('shoot', cpt)
             gray_image = cv2.resize(base_image, (imgSize,imgSize))
             if(ratio != 0):
-                cv2.imwrite('./image/' + str(x) + '_' + str(cpt) + '_' + str(int(current_box_x1/np.shape(image_np)[0]*100)/100) + '_' + str(int(current_box_y1/np.shape(image_np)[1]*100)/100) + '_' + str(int(current_box_x2/np.shape(image_np)[0]*100)/100) + '_' + str(int(current_box_y2/np.shape(image_np)[1]*100)/100) +'.png', gray_image)
+                xa, xb = int(current_box_x1/image_np.shape[0]*100)/100, int(current_box_x2/image_np.shape[0]*100)/100
+                ya, yb = int(current_box_y1/image_np.shape[1]*100)/100, int(current_box_y2/image_np.shape[1]*100)/100
+                cv2.imwrite('./image/' + str(x) + '_' + str(cpt) + '_' + str(xa) + '_' + str(ya) + '_' + str(xb) + '_' + str(yb) +'.png', gray_image)
             else:
                 cv2.imwrite('./image/' + str(x) + '_' + str(cpt) + '.png', gray_image)
             t = time()
@@ -116,8 +118,8 @@ def main(x,ratio):
                 pauseState = True
                 boxSize = r.randint(100,200)
                 start_box_x1, start_box_y1 = end_box_x1, end_box_y1
-                end_box_x1, end_box_y1 = randomBox(np.shape(image_np[0]),np.shape(image_np)[1],boxSize,ratio)
-                ratio = ratio + ((r.random(0,1)-0.5)*0.2)
+                end_box_x1, end_box_y1 = randomBox(image_np.shape[0],image_np.shape[1],boxSize,ratio)
+                ratio = ratio + ((r.random()-0.5)*0.2)
                 j=0
 
             current_box_x1 , current_box_y1 = mooveBox(start_box_x1,start_box_y1,end_box_x1,end_box_y1,100,j)
