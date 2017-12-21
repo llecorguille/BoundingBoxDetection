@@ -1,1 +1,9 @@
-./image/
+
+#Train sample folder
+dataTrain/
+
+#Image Folder
+image/
+
+#Final model folder
+final_model/
