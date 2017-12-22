@@ -16,18 +16,25 @@ class OpenImage(Thread):
         global data
         Thread.__init__(self)
         self.listA = listA
-        self.img, self.value = None, None
+        self.img, self.value, self.size = None, None, None
 
     def run(self):
         """ Code to execute to open. """
         i = 0
         for elm in self.listA:
             self.value = int(elm.split('\\')[1].split('_')[0])
-            self.img = np.array(cv2.resize(cv2.imread(elm, 0), (imgSize,imgSize)))
-            with rlock:
-                data.append([self.img, self.value])
+            if self.value == 0:
+              self.img = np.array(cv2.resize(cv2.imread(elm, 0), (imgSize,imgSize)))
+              with rlock:
+                  data.append([self.img, [-1,-1,-1,-1]])
+            else:
+              self.img = np.array(cv2.resize(cv2.imread(elm, 0), (imgSize,imgSize)))
+              splited = elm.split('\\')[1].split('_')
+              self.size = [float(splited[2]),float(splited[3]),float(splited[4]),float(splited[5][:-4])]
+              with rlock:
+                  data.append([self.img, self.size])
 
-liste = glob.glob('/image/*.png')
+liste = glob.glob('./image/**')
 
 random.shuffle(liste)
 #pourcentage d'exemples pour train le modèle
@@ -56,19 +63,6 @@ for thread in threads:
 
 # Attend que les threads se terminent
 for thread in threads:
-    thread.join()
-
-size = int(len(listeLaouen)/nbThread)
-threads2 = []
-for x in range(nbThread):
-    threads2.append(OpenImage(listeLaouen[x*size:(x+1)*size]))
-
-# Lancement des threads
-for thread in threads2:
-    thread.start()
-
-# Attend que les threads se terminent
-for thread in threads2:
     thread.join()
 
 print('len de data', len(data), time() - t1)
