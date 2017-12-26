@@ -13,7 +13,7 @@ rlock = RLock()
 class OpenImage(Thread):
     """ Thread for open images. """
     def __init__(self, listA):
-        global data
+        global data, imgSize
         Thread.__init__(self)
         self.listA = listA
         self.img, self.value, self.size = None, None, None
@@ -26,11 +26,11 @@ class OpenImage(Thread):
             if self.value == 0:
               self.img = np.array(cv2.resize(cv2.imread(elm, 0), (imgSize,imgSize)))
               with rlock:
-                  data.append([self.img, [-1,-1,-1,-1]])
+                  data.append([self.img, [-1,-1,-1,-1,-1]])
             else:
               self.img = np.array(cv2.resize(cv2.imread(elm, 0), (imgSize,imgSize)))
               splited = elm.split('\\')[1].split('_')
-              self.size = [float(splited[2]),float(splited[3]),float(splited[4]),float(splited[5][:-4])]
+              self.size = [float(splited[2]),float(splited[3]),float(splited[4]) - float(splited[2]),float(splited[5][:-4]) - float(splited[3]),1.0]
               with rlock:
                   data.append([self.img, self.size])
 
@@ -41,8 +41,6 @@ random.shuffle(liste)
 #pourcentage pour le test 1 - split
 split = 0.90
 nbClass = 4
-pasRotation = 10 #pas de la rotation de l'image en degrée
-rotation = 30
 imgSize = 64
 
 data = []
@@ -73,17 +71,9 @@ X_train = []
 y_train = []
 data_train = []
 for elm in data[:int(len(data)*split)]:
-  classe = np.zeros(nbClass)
-  classe[elm[1]] = 1
-  img1 = Image.fromarray(elm[0])
-  img2 = Image.fromarray(np.flip(elm[0],1))
-  data_train.append([np.flip(elm[0],1), classe])
-  data_train.append([elm[0], classe])
-  for x in range(-rotation, rotation, pasRotation):
-    img1a = img1.rotate(x)
-    img2a = img2.rotate(x)
-    data_train.append([np.array(img1a), classe])
-    data_train.append([np.array(img2a), classe])
+    boundingBox = [elm[1][0], 1-elm[1][3], elm[1][2], 1-elm[1][1],elm[1][4]]
+    data_train.append([np.flip(elm[0],1), boundingBox])
+    data_train.append([elm[0], elm[1]])
 
 print('Traitement data_train done ...')
 #Traitement des images pour le test du modèle
@@ -91,43 +81,27 @@ X_test = []
 y_test = []
 data_test = []
 for elm in data[int(len(data)*split):]:
-  classe = np.zeros(nbClass)
-  classe[elm[1]] = 1
-  img1 = Image.fromarray(elm[0])
-  img2 = Image.fromarray(np.flip(elm[0],1))
-  data_test.append([np.flip(elm[0],1), classe])
-  data_test.append([elm[0], classe])
-  for x in range(-rotation, rotation, pasRotation):
-    img1a = img1.rotate(x)
-    img2a = img2.rotate(x)
-    data_test.append([np.array(img1a), classe])
-    data_test.append([np.array(img2a), classe])
+    boundingBox = [elm[1][0], 1-elm[1][3], elm[1][2], 1-elm[1][1],elm[1][4]]
+    data_test.append([np.flip(elm[0],1), boundingBox])
+    data_test.append([elm[0], elm[1]])
 
 print('Traitement data_test done ...')
 data = 0
 random.shuffle(data_test)
 random.shuffle(data_train)
 
-XClassTest = [[] for x in range(nbClass)]
-YClassTest = [[] for y in range(nbClass)]
-for elm in data_test:
-  x = np.argmax(elm[1])
-  YClassTest[x].append(elm[1])
-  XClassTest[x].append(elm[0])
-
 
 for elm in data_train:
-  X_train.append(elm[0])
-  y_train.append(elm[1])
+    X_train.append(elm[0])
+    y_train.append(elm[1])
 data_train = 0
 
 for elm in data_test:
-  X_test.append(elm[0])
-  y_test.append(elm[1])
+    X_test.append(elm[0])
+    y_test.append(elm[1])
 data_test = 0
 
-X_train, y_train, X_test, y_test = np.array(X_train, dtype=np.uint8), np.array(y_train, dtype=np.uint8), np.array(X_test, dtype=np.uint8), np.array(y_test, dtype=np.uint8)
-XClassTest, YClassTest = np.array(XClassTest), np.array(YClassTest)
+X_train, y_train, X_test, y_test = np.array(X_train), np.array(y_train), np.array(X_test), np.array(y_test)
 print('Ready to dump')
 
 save_dir = './dataTrain/'
@@ -136,20 +110,15 @@ if not os.path.exists(save_dir):
 
 
 
-np.save('./dataTrain/Xtest', X_test)
+np.save('./dataTrain/Xtest_0', X_test)
 print("Nombres exemples de test", len(X_test))
 X_test = 0
-np.save('./dataTrain/Ytest', y_test)
+np.save('./dataTrain/Ytest_0', y_test)
 y_test = 0
 
-np.save('./dataTrain/XtestClass', XClassTest)
-XClassTest = 0
-np.save('./dataTrain/YtestClass', YClassTest)
-YClassTest = 0
-
-np.save('./dataTrain/Ytrain', y_train)
+np.save('./dataTrain/Ytrain_0', y_train)
 y_train = 0
-np.save('./dataTrain/Xtrain', X_train)
+np.save('./dataTrain/Xtrain_0', X_train)
 print("Nombres exemples d'entrainement", len(X_train))
 X_train = 0
 
